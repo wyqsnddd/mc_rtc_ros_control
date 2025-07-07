@@ -1,4 +1,3 @@
-#include <rclcpp/rclcpp.hpp>
 #include <sensor_msgs/msg/joint_state.hpp>
 #include <std_msgs/msg/float64_multi_array.hpp>
 
@@ -97,7 +96,7 @@ void run()
   mc_rtc_ros_control::ROSControlInterface ros_iface("subscribe_to", "publish_to", interface.rjo());
   ros_iface.onStateCallback([&](const std::vector<double> & e, const std::vector<double> & v,
                                 const std::vector<double> & t) { interface.onRobotState(ros_iface, e, v, t); });
-  rclcpp::spin(ros_iface.nh);
+  rclcpp::spin(ros_iface.node());
 }
 
 int main(int argc, char * argv[])
@@ -114,6 +113,7 @@ int main(int argc, char * argv[])
 
   rclcpp::NodeOptions options;
   rclcpp::Node node("mc_rtc_ros_control", options);
+
   bool output_velocity = node.declare_parameter<bool>("output_velocity", false);
   bool output_torque = node.declare_parameter<bool>("output_torque", false);
   if(output_velocity && output_torque)

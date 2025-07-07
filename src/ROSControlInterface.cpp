@@ -7,12 +7,12 @@
 namespace mc_rtc_ros_control
 {
 
-struct ROSControlInterfaceImpl
+struct ROSControlInterfaceImpl : public rclcpp::Node
 {
   ROSControlInterfaceImpl(const std::string & subscribe_to,
                           const std::string & publish_to,
                           const std::vector<std::string> & rjo)
-  : rjo_(rjo)
+  :  Node("ROSControlInterface"), rjo_(rjo)
   {
     msg_.layout.dim.resize(1);
     msg_.layout.dim[0].label = "control";
@@ -20,8 +20,8 @@ struct ROSControlInterfaceImpl
     msg_.layout.dim[0].stride = msg_.layout.dim[0].size;
     msg_.data.resize(msg_.layout.dim[0].size);
     msg_.layout.data_offset = 0;
-    pub_ = nh_->create_publisher<std_msgs::msg::Float64MultiArray>(publish_to, 1);
-    sub_ = nh_->create_subscription<sensor_msgs::msg::JointState>(
+    pub_ = create_publisher<std_msgs::msg::Float64MultiArray>(publish_to, 1);
+    sub_ = create_subscription<sensor_msgs::msg::JointState>(
         subscribe_to, 1, std::bind(&ROSControlInterfaceImpl::joint_callback, this, std::placeholders::_1));
   }
 
@@ -42,7 +42,7 @@ struct ROSControlInterfaceImpl
     const auto & rjo = rjo_;
     if(msg->name.size() > rjo.size())
     {
-      RCLCPP_FATAL(nh_->get_logger(),
+      RCLCPP_FATAL(get_logger(),
                    "Joint state passed in to mc_rtc_ros_control has more joints than the robot reference joint order, "
                    "something is wrong");
     }
@@ -59,7 +59,7 @@ struct ROSControlInterfaceImpl
       auto it = std::find(rjo.begin(), rjo.end(), n);
       if(it == rjo.end())
       {
-        RCLCPP_FATAL(nh_->get_logger(), "Joint state passed in to mc_rtc_ros_control for %s which does not exist in the robot reference joint order, something is wrong",
+        RCLCPP_FATAL(get_logger(), "Joint state passed in to mc_rtc_ros_control for %s which does not exist in the robot reference joint order, something is wrong",
                      n.c_str());
       }
       ros_to_rjo_[i] = std::distance(rjo.begin(), it);
@@ -107,7 +107,6 @@ struct ROSControlInterfaceImpl
   std::vector<std::string> rjo_;
   bool init_done_ = false;
 
-  rclcpp::Node::SharedPtr nh_;
   rclcpp::Subscription<sensor_msgs::msg::JointState>::SharedPtr sub_;
   rclcpp::Publisher<std_msgs::msg::Float64MultiArray>::SharedPtr pub_;
 
@@ -124,9 +123,8 @@ struct ROSControlInterfaceImpl
 ROSControlInterface::ROSControlInterface(const std::string & subscribe_to,
                                          const std::string & publish_to,
                                          const std::vector<std::string> & ref_joint_order)
-: impl_(new ROSControlInterfaceImpl(subscribe_to, publish_to, ref_joint_order))
+: impl_(std::make_shared<ROSControlInterfaceImpl>(subscribe_to, publish_to, ref_joint_order))
 {
-  nh = impl_->nh_;
 }
 
 ROSControlInterface::~ROSControlInterface() = default;
@@ -140,9 +138,13 @@ void ROSControlInterface::sendCommand(const std::vector<double> & command)
 {
   if(!impl_->init_done_)
   {
-    RCLCPP_FATAL(impl_->nh_->get_logger(), "ROSControlInterface::sendCommand called before initialization is done");
+    RCLCPP_FATAL(impl_->get_logger(), "ROSControlInterface::sendCommand called before initialization is done");
   }
   impl_->sendCommand(command);
+}
+
+rclcpp::Node::SharedPtr ROSControlInterface::node() {
+  return impl_;
 }
 
 } // namespace mc_rtc_ros_control

@@ -1,7 +1,6 @@
 #pragma once
 
 #include <functional>
-#include <memory>
 #include <string>
 #include <vector>
 #include <rclcpp/rclcpp.hpp>
@@ -28,10 +27,10 @@ struct ROSControlInterface
   /** Write on the command topic */
   void sendCommand(const std::vector<double> & command);
 
-  rclcpp::Node::SharedPtr nh;
+  rclcpp::Node::SharedPtr node();
 
 private:
-  std::unique_ptr<ROSControlInterfaceImpl> impl_;
+  std::shared_ptr<ROSControlInterfaceImpl> impl_;
 };
 
 } // namespace mc_rtc_ros_control
