@@ -44,7 +44,8 @@ struct ROSControlInterface
       {
         const auto & robot = controller_.robot();
         const auto & mbc = robot.mbc();
-        const auto & command = [&]() -> const std::vector<std::vector<double>> & {
+        const auto & command = [&]() -> const std::vector<std::vector<double>> &
+        {
           if constexpr(OutT == ControlOutput::Position)
           {
             command_ = encoders;

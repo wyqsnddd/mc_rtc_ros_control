@@ -1,8 +1,8 @@
 #include <mc_rtc_ros_control/ROSControlInterface.h>
 
-#include <rclcpp/rclcpp.hpp>
 #include <sensor_msgs/msg/joint_state.hpp>
 #include <std_msgs/msg/float64_multi_array.hpp>
+#include <rclcpp/rclcpp.hpp>
 
 namespace mc_rtc_ros_control
 {
@@ -12,7 +12,7 @@ struct ROSControlInterfaceImpl : public rclcpp::Node
   ROSControlInterfaceImpl(const std::string & subscribe_to,
                           const std::string & publish_to,
                           const std::vector<std::string> & rjo)
-  :  Node("ROSControlInterface"), rjo_(rjo)
+  : Node("ROSControlInterface"), rjo_(rjo)
   {
     msg_.layout.dim.resize(1);
     msg_.layout.dim[0].label = "control";
@@ -59,7 +59,9 @@ struct ROSControlInterfaceImpl : public rclcpp::Node
       auto it = std::find(rjo.begin(), rjo.end(), n);
       if(it == rjo.end())
       {
-        RCLCPP_FATAL(get_logger(), "Joint state passed in to mc_rtc_ros_control for %s which does not exist in the robot reference joint order, something is wrong",
+        RCLCPP_FATAL(get_logger(),
+                     "Joint state passed in to mc_rtc_ros_control for %s which does not exist in the robot reference "
+                     "joint order, something is wrong",
                      n.c_str());
       }
       ros_to_rjo_[i] = std::distance(rjo.begin(), it);
@@ -143,7 +145,8 @@ void ROSControlInterface::sendCommand(const std::vector<double> & command)
   impl_->sendCommand(command);
 }
 
-rclcpp::Node::SharedPtr ROSControlInterface::node() {
+rclcpp::Node::SharedPtr ROSControlInterface::node()
+{
   return impl_;
 }
 

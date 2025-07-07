@@ -14,7 +14,7 @@ def launch_setup(context, *args, **kwargs):
 
     output_velocity = False if context.launch_configurations[
         'output_velocity'] == 'false' else True
-    
+
     output_torque = False if context.launch_configurations[
         'output_torque'] == 'false' else True
 

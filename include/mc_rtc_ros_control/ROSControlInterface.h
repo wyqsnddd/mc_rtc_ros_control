@@ -1,9 +1,9 @@
 #pragma once
 
 #include <functional>
+#include <rclcpp/rclcpp.hpp>
 #include <string>
 #include <vector>
-#include <rclcpp/rclcpp.hpp>
 
 namespace mc_rtc_ros_control
 {

@@ -28,10 +28,10 @@ Where:
 - `publish_to` is the topic where the controller is subscribed to a control message (defaults to: `/command`)
 - `subscribe_to` is the topic where the robot is publishing its state through a `sensor_msgs/msg/JointState` message (defaults to: `/joint_state`)
 
-Example 
+Example
 --
 
-This example focus on UR usage : 
+This example focus on UR usage :
 
 Requirements :
 
