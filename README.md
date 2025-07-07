@@ -20,10 +20,31 @@ Usage
 --
 
 ```bash
-ros2 launch mc_rtc_ros_control control.launch publish_to:=/my/command subscribe_to:=/my/state
+ros2 launch mc_rtc_ros_control control.launch.py publish_to:=/my/command subscribe_to:=/my/state
 ```
 
 Where:
 
 - `publish_to` is the topic where the controller is subscribed to a control message (defaults to: `/command`)
 - `subscribe_to` is the topic where the robot is publishing its state through a `sensor_msgs/msg/JointState` message (defaults to: `/joint_state`)
+
+Example 
+--
+
+This example focus on UR usage : 
+
+Requirements :
+
+* https://github.com/UniversalRobots/Universal_Robots_ROS2_Gazebo_Simulation
+
+Run the following command to start the simulation :
+
+```bash
+ros2 launch ur_simulation_gazebo ur_sim_control.launch.py initial_joint_controller:=forward_position_controller
+```
+
+To run mc_rtc ros node, please run :
+
+```bash
+ros2 launch mc_rtc_ros_control control.launch.py publish_to:=/forward_position_controller/commands
+```
