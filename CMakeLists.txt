@@ -13,6 +13,9 @@ project(
 find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(sensor_msgs REQUIRED)
+find_package(std_msgs REQUIRED)
+find_package(tf2_ros REQUIRED)
+find_package(visualization_msgs REQUIRED)
 find_package(mc_rtc REQUIRED)
 
 include_directories(include ${ament_INCLUDE_DIRS})
@@ -39,6 +42,19 @@ install(
   LIBRARY DESTINATION lib
   RUNTIME DESTINATION lib/${PROJECT_NAME})
 
-install(DIRECTORY launch DESTINATION share/${PROJECT_NAME})
+add_executable(mc_convex_visualization src/mc_convex_visualization.cpp)
+target_link_libraries(mc_convex_visualization mc_rtc::mc_control)
+ament_target_dependencies(mc_convex_visualization rclcpp visualization_msgs)
+
+add_executable(mc_surface_visualization src/mc_surface_visualization.cpp)
+target_link_libraries(mc_surface_visualization mc_rtc::mc_control)
+ament_target_dependencies(mc_surface_visualization rclcpp std_msgs tf2_ros
+                          visualization_msgs)
+
+install(
+  TARGETS mc_convex_visualization mc_surface_visualization
+  RUNTIME DESTINATION lib/${PROJECT_NAME})
+
+install(DIRECTORY launch rviz DESTINATION share/${PROJECT_NAME})
 
 ament_package()
