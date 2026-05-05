@@ -3,9 +3,12 @@
 //
 
 #include <rclcpp/rclcpp.hpp>
+#include <std_msgs/msg/string.hpp>
+#include <tf2_ros/static_transform_broadcaster.h>
 #include <visualization_msgs/msg/marker_array.hpp>
 
 #include <mc_rbdyn/RobotLoader.h>
+#include <mc_rbdyn/RobotModule.h>
 #include <mc_rbdyn/Robots.h>
 #include <mc_rtc/logging.h>
 #include <mc_rtc/version.h>
@@ -16,6 +19,10 @@
 #include <sch/S_Polyhedron/S_Polyhedron.h>
 
 #include <Eigen/Geometry>
+
+#include <filesystem>
+#include <fstream>
+#include <regex>
 
 namespace
 {
@@ -68,6 +75,9 @@ public:
 
     RCLCPP_INFO(this->get_logger(), "Robot %s loaded with %zu convexes", robot.name().c_str(),
                 robot.convexes().size());
+
+    publishRobotDescription(rm->urdf_path);
+    publishStaticTF(robot, frame_id);
 
     buildMarkers(robot, frame_id);
 
@@ -211,9 +221,90 @@ private:
     marker.pose = svaToPose(pose);
   }
 
+  void publishRobotDescription(const std::string & urdf_path)
+  {
+    std::ifstream ifs(urdf_path);
+    if(!ifs.is_open())
+    {
+      RCLCPP_WARN(this->get_logger(), "Could not open URDF: %s", urdf_path.c_str());
+      return;
+    }
+    std::string urdf_content((std::istreambuf_iterator<char>(ifs)), std::istreambuf_iterator<char>());
+
+    // Resolve relative mesh paths to absolute file:// URIs
+    std::string urdf_dir = std::filesystem::path(urdf_path).parent_path().string();
+    std::regex mesh_regex(R"_(filename\s*=\s*"([^"]+)")_");
+    std::string result;
+    std::sregex_iterator it(urdf_content.begin(), urdf_content.end(), mesh_regex);
+    std::sregex_iterator end;
+    size_t last_pos = 0;
+
+    for(; it != end; ++it)
+    {
+      auto & match = *it;
+      std::string path = match[1].str();
+      result.append(urdf_content, last_pos, match.position() - last_pos);
+
+      if(path.find("://") == std::string::npos)
+      {
+        std::filesystem::path abs_path = std::filesystem::weakly_canonical(std::filesystem::path(urdf_dir) / path);
+        result += "filename=\"file://" + abs_path.string() + "\"";
+      }
+      else
+      {
+        result += match[0].str();
+      }
+      last_pos = match.position() + match[0].length();
+    }
+    result.append(urdf_content, last_pos, std::string::npos);
+
+    auto desc_qos = rclcpp::QoS(1).transient_local();
+    desc_pub_ = this->create_publisher<std_msgs::msg::String>("robot_description", desc_qos);
+    std_msgs::msg::String msg;
+    msg.data = result;
+    desc_pub_->publish(msg);
+    RCLCPP_INFO(this->get_logger(), "Published robot_description from %s (mesh paths resolved)", urdf_path.c_str());
+  }
+
+  void publishStaticTF(const mc_rbdyn::Robot & robot, const std::string & frame_id)
+  {
+    tf_broadcaster_ = std::make_shared<tf2_ros::StaticTransformBroadcaster>(this);
+    std::vector<geometry_msgs::msg::TransformStamped> transforms;
+
+    for(int i = 0; i < robot.mb().nrBodies(); ++i)
+    {
+      const auto & body_name = robot.mb().body(i).name();
+      const auto & pose = robot.bodyPosW()[static_cast<size_t>(i)];
+
+      geometry_msgs::msg::TransformStamped t;
+      t.header.stamp = this->now();
+      t.header.frame_id = frame_id;
+      t.child_frame_id = body_name;
+
+      const Eigen::Vector3d & p = pose.translation();
+      Eigen::Quaterniond q(pose.rotation().transpose());
+      q.normalize();
+
+      t.transform.translation.x = p.x();
+      t.transform.translation.y = p.y();
+      t.transform.translation.z = p.z();
+      t.transform.rotation.w = q.w();
+      t.transform.rotation.x = q.x();
+      t.transform.rotation.y = q.y();
+      t.transform.rotation.z = q.z();
+
+      transforms.push_back(t);
+    }
+
+    tf_broadcaster_->sendTransform(transforms);
+    RCLCPP_INFO(this->get_logger(), "Published %zu static TF frames", transforms.size());
+  }
+
   mc_rbdyn::RobotsPtr robots_;
   visualization_msgs::msg::MarkerArray markers_;
   rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr pub_;
+  rclcpp::Publisher<std_msgs::msg::String>::SharedPtr desc_pub_;
+  std::shared_ptr<tf2_ros::StaticTransformBroadcaster> tf_broadcaster_;
   rclcpp::TimerBase::SharedPtr timer_;
 };
 

@@ -44,7 +44,8 @@ install(
 
 add_executable(mc_convex_visualization src/mc_convex_visualization.cpp)
 target_link_libraries(mc_convex_visualization mc_rtc::mc_control)
-ament_target_dependencies(mc_convex_visualization rclcpp visualization_msgs)
+ament_target_dependencies(mc_convex_visualization rclcpp std_msgs tf2_ros
+                          visualization_msgs)
 
 add_executable(mc_surface_visualization src/mc_surface_visualization.cpp)
 target_link_libraries(mc_surface_visualization mc_rtc::mc_control)

@@ -17,7 +17,9 @@
 
 #include <Eigen/Geometry>
 
+#include <filesystem>
 #include <fstream>
+#include <regex>
 
 namespace
 {
@@ -238,12 +240,43 @@ private:
     }
     std::string urdf_content((std::istreambuf_iterator<char>(ifs)), std::istreambuf_iterator<char>());
 
+    // Resolve relative mesh paths to absolute file:// URIs
+    // Handles: filename="meshes/..." or filename="package://..."
+    // Leaves package:// and file:// URIs untouched
+    std::string urdf_dir = std::filesystem::path(urdf_path).parent_path().string();
+    std::regex mesh_regex(R"_(filename\s*=\s*"([^"]+)")_");
+    std::string result;
+    std::sregex_iterator it(urdf_content.begin(), urdf_content.end(), mesh_regex);
+    std::sregex_iterator end;
+    size_t last_pos = 0;
+
+    for(; it != end; ++it)
+    {
+      auto & match = *it;
+      std::string path = match[1].str();
+      result.append(urdf_content, last_pos, match.position() - last_pos);
+
+      if(path.find("://") == std::string::npos)
+      {
+        // Relative path — resolve against URDF directory
+        std::filesystem::path abs_path = std::filesystem::weakly_canonical(std::filesystem::path(urdf_dir) / path);
+        result += "filename=\"file://" + abs_path.string() + "\"";
+      }
+      else
+      {
+        // Already a URI (package://, file://, etc.) — keep as-is
+        result += match[0].str();
+      }
+      last_pos = match.position() + match[0].length();
+    }
+    result.append(urdf_content, last_pos, std::string::npos);
+
     auto desc_qos = rclcpp::QoS(1).transient_local();
     desc_pub_ = this->create_publisher<std_msgs::msg::String>("robot_description", desc_qos);
     std_msgs::msg::String msg;
-    msg.data = urdf_content;
+    msg.data = result;
     desc_pub_->publish(msg);
-    RCLCPP_INFO(this->get_logger(), "Published robot_description from %s", urdf_path.c_str());
+    RCLCPP_INFO(this->get_logger(), "Published robot_description from %s (mesh paths resolved)", urdf_path.c_str());
   }
 
   void publishStaticTF(const mc_rbdyn::Robot & robot, const std::string & frame_id)

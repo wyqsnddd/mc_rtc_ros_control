@@ -8,6 +8,18 @@ Visualization Manager:
       Name: Grid
       Enabled: true
       Value: true
+    - Class: rviz_default_plugins/RobotModel
+      Name: Robot Model
+      Enabled: true
+      Value: true
+      Description Source: Topic
+      Description Topic:
+        Value: /robot_description
+        Depth: 5
+        Durability Policy: Transient Local
+        Reliability Policy: Reliable
+      Alpha: 0.5
+      TF Prefix: ""
     - Class: rviz_default_plugins/MarkerArray
       Name: Convex Markers
       Enabled: true
@@ -17,6 +29,10 @@ Visualization Manager:
         Depth: 5
         Durability Policy: Transient Local
         Reliability Policy: Reliable
+    - Class: rviz_default_plugins/TF
+      Name: TF
+      Enabled: false
+      Value: true
   Global Options:
     Background Color: 48; 48; 48
     Fixed Frame: map
